@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { MODULE_META } from '../types'
+import { MODULE_META, ROLE_META } from '../types'
 import { STATUS_HEX, STATUS_LABEL, statusBgClass, statusTextClass } from './statusTheme'
 import { Panel, SimTag } from './Panel'
 import { useSim } from '../simulation/useSim'
@@ -59,99 +59,154 @@ export function ModuleDetailPanel() {
   const meta = MODULE_META[id]
   const hex = STATUS_HEX[mod.status]
   const offline = !state.satelliteOnline
+  const isOps = ROLE_META[state.role].isOps
 
   const fuelPct = state.fuel.v
   const burn = state.burnRate
 
-  const rows = (() => {
-    switch (id) {
-      case 'main':
-        return (
-          <>
-            <MetricRow
-              label="Generator load"
-              value={`${state.gen.v.toFixed(0)} %`}
-              tone={state.generatorFailed ? 'ok' : statusTone(state.gen.band.kind)}
-              sub={state.generatorFailed ? 'backup bus' : 'nominal bus'}
-            />
-            <MetricRow
-              label="Ambient"
-              value={`${state.temp.v.toFixed(1)} °C`}
-              tone={statusTone(state.temp.band.kind)}
-            />
-            <MetricRow
-              label="Power state"
-              value={state.generatorFailed ? 'BACKUP' : 'RUNNING'}
-              tone={state.generatorFailed ? 'warning' : 'ok'}
-            />
-          </>
-        )
-      case 'fuel-farm':
-      case 'fuel-station':
-        return (
-          <>
-            <MetricRow
-              label="Fuel reserve"
-              value={`${fuelPct.toFixed(1)} %`}
-              tone={statusTone(state.fuel.band.kind)}
-            />
-            <MetricRow
-              label="Burn draw"
-              value={`${burn.toFixed(2)} %/day`}
-              tone={state.generatorFailed ? 'warning' : 'default'}
-              sub={state.generatorFailed ? 'backup 2.1×' : 'nominal'}
-            />
-            <MetricRow
-              label="Runway"
-              value={`${state.daysRemaining.toFixed(1)} d`}
-              tone={runwayTone(state.daysRemaining)}
-            />
-          </>
-        )
-      case 'pump-house':
-        return (
-          <>
-            <MetricRow
-              label="Seawater intake"
-              value={`${(state.seaState * 100).toFixed(0)} %`}
-              tone={state.seaState > 0.72 ? 'warning' : 'ok'}
-              sub="flow nominal"
-            />
-            <MetricRow label="Sea condition" value={state.seaState > 0.72 ? 'FRAZIL ICE' : 'OPEN WATER'} tone={state.seaState > 0.72 ? 'warning' : 'ok'} />
-            <MetricRow label="Ambient" value={`${state.temp.v.toFixed(1)} °C`} tone={statusTone(state.temp.band.kind)} />
-          </>
-        )
-      case 'summer-camp':
-        return (
-          <>
-            <MetricRow label="Occupancy" value="UNOCCUPIED" tone="default" sub="seasonal standby" />
-            <MetricRow label="Ambient" value={`${state.temp.v.toFixed(1)} °C`} tone={statusTone(state.temp.band.kind)} />
-            <MetricRow label="Shelter access" value="READY" tone="ok" />
-          </>
-        )
-      case 'ageos':
-        return (
-          <>
-            <MetricRow
-              label="Uplink"
-              value={state.satelliteOnline ? 'ONLINE' : 'SUSPENDED'}
-              tone={state.satelliteOnline ? 'ok' : 'warning'}
-            />
-            <MetricRow
-              label="Queued packets"
-              value={`${state.queuedPackets}`}
-              tone={state.satelliteOnline ? 'default' : 'warning'}
-              sub={offline ? 'store & forward' : 'synced'}
-            />
-            <MetricRow
-              label="Bit error rate"
-              value={state.satelliteOnline ? '0.00 e-3' : '—'}
-              tone={state.satelliteOnline ? 'ok' : 'default'}
-            />
-          </>
-        )
-    }
-  })()
+  const ambientRow = (
+    <MetricRow
+      label="Ambient"
+      value={`${state.temp.v.toFixed(1)} °C`}
+      tone={statusTone(state.temp.band.kind)}
+    />
+  )
+  const seaRows = (
+    <>
+      <MetricRow
+        label="Seawater intake"
+        value={`${(state.seaState * 100).toFixed(0)} %`}
+        tone={state.seaState > 0.72 ? 'warning' : 'ok'}
+        sub="flow nominal"
+      />
+      <MetricRow label="Sea condition" value={state.seaState > 0.72 ? 'FRAZIL ICE' : 'OPEN WATER'} tone={state.seaState > 0.72 ? 'warning' : 'ok'} />
+    </>
+  )
+
+  const rows = isOps
+    ? (() => {
+        switch (id) {
+          case 'main':
+            return (
+              <>
+                <MetricRow
+                  label="Generator load"
+                  value={`${state.gen.v.toFixed(0)} %`}
+                  tone={state.generatorFailed ? 'ok' : statusTone(state.gen.band.kind)}
+                  sub={state.generatorFailed ? 'backup bus' : 'nominal bus'}
+                />
+                {ambientRow}
+                <MetricRow
+                  label="Power state"
+                  value={state.generatorFailed ? 'BACKUP' : 'RUNNING'}
+                  tone={state.generatorFailed ? 'warning' : 'ok'}
+                />
+              </>
+            )
+          case 'fuel-farm':
+          case 'fuel-station':
+            return (
+              <>
+                <MetricRow
+                  label="Fuel reserve"
+                  value={`${fuelPct.toFixed(1)} %`}
+                  tone={statusTone(state.fuel.band.kind)}
+                />
+                <MetricRow
+                  label="Burn draw"
+                  value={`${burn.toFixed(2)} %/day`}
+                  tone={state.generatorFailed ? 'warning' : 'default'}
+                  sub={state.generatorFailed ? 'backup 2.1×' : 'nominal'}
+                />
+                <MetricRow
+                  label="Runway"
+                  value={`${state.daysRemaining.toFixed(1)} d`}
+                  tone={runwayTone(state.daysRemaining)}
+                />
+              </>
+            )
+          case 'pump-house':
+            return (
+              <>
+                {seaRows}
+                {ambientRow}
+              </>
+            )
+          case 'summer-camp':
+            return (
+              <>
+                <MetricRow label="Occupancy" value="UNOCCUPIED" tone="default" sub="seasonal standby" />
+                {ambientRow}
+                <MetricRow label="Shelter access" value="READY" tone="ok" />
+              </>
+            )
+          case 'ageos':
+            return (
+              <>
+                <MetricRow
+                  label="Uplink"
+                  value={state.satelliteOnline ? 'ONLINE' : 'SUSPENDED'}
+                  tone={state.satelliteOnline ? 'ok' : 'warning'}
+                />
+                <MetricRow
+                  label="Queued packets"
+                  value={`${state.queuedPackets}`}
+                  tone={state.satelliteOnline ? 'default' : 'warning'}
+                  sub={offline ? 'store & forward' : 'synced'}
+                />
+                <MetricRow
+                  label="Bit error rate"
+                  value={state.satelliteOnline ? '0.00 e-3' : '—'}
+                  tone={state.satelliteOnline ? 'ok' : 'default'}
+                />
+              </>
+            )
+        }
+      })()
+    : (() => {
+        switch (id) {
+          case 'main':
+            return <>{ambientRow}</>
+          case 'fuel-farm':
+          case 'fuel-station':
+            return (
+              <>
+                <MetricRow label="Reserve metering" value="RESTRICTED" tone="default" sub="science role" />
+                {ambientRow}
+              </>
+            )
+          case 'pump-house':
+            return (
+              <>
+                {seaRows}
+                {ambientRow}
+              </>
+            )
+          case 'summer-camp':
+            return (
+              <>
+                <MetricRow label="Occupancy" value="UNOCCUPIED" tone="default" sub="seasonal standby" />
+                {ambientRow}
+              </>
+            )
+          case 'ageos':
+            return (
+              <>
+                <MetricRow
+                  label="Uplink"
+                  value={state.satelliteOnline ? 'ONLINE' : 'SUSPENDED'}
+                  tone={state.satelliteOnline ? 'ok' : 'warning'}
+                />
+                <MetricRow
+                  label="Queued packets"
+                  value={`${state.queuedPackets}`}
+                  tone={state.satelliteOnline ? 'default' : 'warning'}
+                  sub={offline ? 'store & forward' : 'synced'}
+                />
+              </>
+            )
+        }
+      })()
 
   return (
     <Panel as="div">
@@ -159,7 +214,7 @@ export function ModuleDetailPanel() {
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-sans text-[15px] font-semibold text-ink">{meta.name}</span>
-            <SimTag label="live binding" />
+            <SimTag label="Simulated" />
           </div>
           <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.16em] text-slate-dim">
             {meta.subsystem}

@@ -146,7 +146,7 @@ function SeaIntakeCard() {
           <Droplets size={13} className="text-glacial" />
           <h3 className="font-sans text-[13px] font-medium text-ink">Sea-water intake</h3>
         </div>
-        <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-slate-faint">Env · Lyngen</span>
+        <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-slate-faint">Env · Sim</span>
       </header>
       <div className="px-3.5 pt-3">
         <div className="flex items-baseline gap-1.5">

@@ -36,7 +36,7 @@ export function FuelRunway() {
             >
               {days < 10 ? days.toFixed(1) : days.toFixed(0)}
             </motion.span>
-            <span className="pb-1 font-mono text-[14px] text-slate-dim">da</span>
+            <span className="pb-1 font-mono text-[14px] text-slate-dim">days</span>
           </div>
           <p className="mt-1.5 font-mono text-[9.5px] uppercase tracking-[0.18em] text-slate-dim">
             days of fuel @ current burn
