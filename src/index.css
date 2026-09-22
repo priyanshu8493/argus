@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-midnight: #0a1420;
+  --color-abyss: #050b13;
+  --color-panel: #0e1b29;
+  --color-panel2: #122237;
+  --color-line: #1d3348;
+  --color-line-soft: #16283b;
+
+  --color-glacial: #5ec8d8;
+  --color-glacial-dim: #3b93a5;
+  --color-ok: #4ade80;
+  --color-ok-dim: #2f9e5b;
+  --color-amber: #f5a623;
+  --color-amber-dim: #b97b1a;
+  --color-crit: #ff5a5f;
+  --color-crit-dim: #c33d42;
+
+  --color-ink: #e6f0f7;
+  --color-slate-mid: #9fb8cc;
+  --color-slate-dim: #64809a;
+  --color-slate-faint: #3d5a73;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: #0a1420;
+  color: #e6f0f7;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgba(94, 200, 216, 0.28);
+}
+
+/* Thin custom scrollbars to match the panel aesthetic */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #223a52 transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #223a52;
+  border-radius: 0;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
