@@ -94,6 +94,7 @@ export function AIPredictiveLab() {
   }
 
   const risk = result?.diagnostics.risk_level
+  const providerLabel = result?.provider === 'groq' ? 'Live model' : 'Local fallback'
   const theme = {
     hex: STATUS_HEX[RISK_TO_STATUS[risk ?? 'NOMINAL']],
     bg: 'transparent',
@@ -111,10 +112,10 @@ export function AIPredictiveLab() {
               className="border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em]"
               style={{ color: theme.hex, borderColor: `${theme.hex}55` }}
             >
-              {result.provider === 'groq' ? 'Groq live' : 'local fallback'}
+              {providerLabel}
             </span>
           )}
-          <SimTag label="Groq AI · gpt-oss-20b" />
+          <SimTag label="AI · live inference" />
         </>
       }
     >
@@ -237,7 +238,7 @@ export function AIPredictiveLab() {
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[9px] uppercase tracking-[0.14em] text-slate-dim">
               <span>
-                provider <span className="text-slate-mid">{result.provider}</span>
+                engine <span className="text-slate-mid">{providerLabel}</span>
               </span>
               <span>
                 model <span className="text-slate-mid">{result.model}</span>

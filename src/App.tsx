@@ -266,7 +266,7 @@ function Footer() {
   return (
     <footer className="flex items-center justify-between gap-3 border-t border-line bg-abyss/60 px-4 py-2">
       <p className="font-sans text-[10px] text-slate-dim">
-        NCPOR · Problem Statement 26060 — Digital Twin for Remote Management of India&apos;s Antarctic Stations (Bharati).
+        NCPOR · Digital Twin — Bharati Station, Larsemann Hills.
       </p>
       <p className="shrink-0 font-mono text-[9px] uppercase tracking-[0.16em] text-slate-faint">
         All telemetry simulated · no NCPOR operational data

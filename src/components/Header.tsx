@@ -183,7 +183,7 @@ export function Header() {
               BHARATI <span className="font-normal text-slate-mid">· digital twin</span>
             </h1>
             <p className="truncate font-mono text-[9px] uppercase tracking-[0.18em] text-slate-faint">
-              sih ps 26060 · ncpor hq · prydz bay, larsemann hills
+              remote console · prydz bay, larsemann hills
             </p>
           </div>
         </div>
