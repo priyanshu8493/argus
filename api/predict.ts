@@ -173,6 +173,13 @@ function localFallback(input: PredictInput): Diagnostics {
 }
 
 function readBody(req: IncomingMessage): Promise<string> {
+  const vReq = req as IncomingMessage & { body?: unknown; readableEnded?: boolean }
+  if (vReq.body !== undefined) {
+    return Promise.resolve(
+      typeof vReq.body === 'string' ? vReq.body : JSON.stringify(vReq.body),
+    )
+  }
+  if (vReq.readableEnded === true) return Promise.resolve('')
   return new Promise((resolve, reject) => {
     let data = ''
     req.setEncoding('utf8')
@@ -238,6 +245,15 @@ export async function handlePredictRoute(req: IncomingMessage, res: ServerRespon
 
 export interface PredictApiOptions {
   apiKey?: string
+}
+
+/**
+ * Vercel serverless zero-config handler for POST /api/predict.
+ * Vercel auto-detects this default export; set `GROQ_API_KEY` in the project
+ * Environment Variables dashboard to enable the live Groq model.
+ */
+export default async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  await handlePredictRoute(req, res, process.env.GROQ_API_KEY)
 }
 
 /** Vite dev + preview middleware exposing the single POST /api/predict route. */
