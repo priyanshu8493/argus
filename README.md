@@ -87,7 +87,7 @@ The app is built to be **operated by a judge**, not just watched:
 
 | # | Feature | What happens |
 |---|---------|--------------|
-| 1 | **Station module map** | An **interactive 3D digital twin** (Three.js / react-three-fiber) of the Bharati footprint — Main Building, Fuel Farm, Fuel Station, Sea-water Pump House, Summer Camp / Emergency Shelter and the AGEOS ground station — rendered as a mission-control scene: engineering ground grid, radar sweep, animated power/fuel/sea-water/uplink flows, storm snow, CAD wireframe status cages and a blinking aviation beacon on the AGEOS mast. **Orbit / pan / zoom**, click any module to open its live-bound detail panel. A **Plan sheet** toggle drops back to the 2D SVG CAD schematic (default view is **Twin 3D**; it gracefully falls back to the plan sheet if WebGL is unavailable). |
+| 1 | **Station module map / 3D twin cockpit** | An **interactive 3D digital twin** (Three.js / react-three-fiber) of the Bharati footprint — Main Building, Fuel Farm, Fuel Station, Sea-water Pump House, Summer Camp / Emergency Shelter and the AGEOS ground station — rendered as a mission-control scene: engineering ground grid, radar sweep, animated power/fuel/sea-water/uplink flows, storm snow, CAD wireframe status cages and a blinking aviation beacon on the AGEOS mast. **Orbit / pan / zoom**, and navigate by clicking any module inside the scene, a module **rail** (left HUD), or the bottom **view presets** (`Site · Main · Fuel Farm · AGEOS · Port · Camp`) — the camera **flies to** the component. Keyboard: `1–6` jump to modules, `P` port, `0`/`Esc` back to site. A live **focus chip** names the component in view. Selecting a component binds the right-hand panel, which serves that component's live metrics **plus its own Twin Forecast** (risk verdict, ETA to failure/warning, narrative and recommended actions, derived live per subsystem and role-aware). A **Plan sheet** toggle drops back to the 2D SVG CAD schematic as the WebGL-safe fallback; the 3D canvas stays mounted (display-hidden) so toggling never recreates the GPU context, and a native WebGL context-loss event also falls back gracefully. |
 | 2 | **Live simulated telemetry** | Ambient temperature, generator load % and fuel reserve % update on a bounded random walk every ~2 s, rendered as smooth Recharts sparklines with monospace readouts and threshold reference lines. A 90-sample rolling window is kept per series. |
 | 3 | **Threshold-driven alerts** | Alerts auto-fire only on **band transitions** (nominal → warning → critical), so the feed is meaningful rather than noisy. Timestamped (UTC), severity-coloured, newest first. HQ Admin can acknowledge alerts; Station Leader only reads. |
 | 4 | **Fuel-runway estimate** | Live `days of fuel = reserve % ÷ burn %/day`, prominently displayed and labelled *Simulated estimate*. Colour-scales (≤ 25 d warning, ≤ 12 d critical) and animates on every recompute. |
@@ -100,7 +100,7 @@ The app is built to be **operated by a judge**, not just watched:
 
 | Capability | HQ Admin | Station Leader | Scientist |
 |-----------|:--------:|:--------------:|:---------:|
-| Station module map + module details | ✅ | ✅ | ✅ |
+| 3D twin cockpit (map + module details + forecast) | ✅ | ✅ | ✅ |
 | Ambient temperature telemetry | ✅ | ✅ | ✅ |
 | Sea-water intake telemetry | ✅ | ✅ | ✅ *(scientist console)* |
 | Generator load telemetry | ✅ | ✅ | ❌ hidden |
@@ -174,6 +174,21 @@ Principles enforced in `src/components`:
   (power cyan, fuel amber, sea-water, satellite uplink) that tint by live
   status and reverse to red when the generator trips. Two-dimensional
   "Plan sheet" remains a dropdown away for the schematic representation.
+- **Cockpit layout**: the twin is the hero surface. On desktop the grid is
+  `8 / 4` — the full-height 3D twin + a slim operations rail (Fuel Runway,
+  What-if lab, AI Predictive Lab, Alert feed; Scientist rail swaps in
+  temperature + sea-water cards). HUD overlays sit *on* the scene: module
+  rail (top-left), live telemetry (top-right), view presets (bottom), alert
+  ticker (bottom-left) and a focus chip (top-center) that always says which
+  component the camera is pointing at. Selecting a component reuses the same
+  rail/preset/canvas/plan interactions everywhere — one mental model.
+- **Per-module Twin Forecast**: clicking any component surfaces a live
+  **forecast block** on the detail panel (`src/forecast.ts`): `STABLE /
+  DEGRADED / CONTAINMENT` verdict + headline, ETA (e.g. *"14 d to critical
+  reserve"*, *"critical bus in ~3 h"*), a short narrative and two
+  operator actions. It is a pure function of the sim state — deterministic,
+  offline, and role-gated (a Scientist on a fuel module sees the fuel data
+  restricted, not leaked).
 - **Systems status strip**: a slim global bar under the header aggregates all
   six module statuses into one blinking `SYSTEMS: ALL NOMINAL / DEGRADED /
   CRITICAL` verdict with OK/WARN/CRIT counters.
@@ -238,9 +253,10 @@ sih_2026_mvp/
 └─ src/
    ├─ main.tsx                 # entry — imports bundled fonts, mounts <App/>
    ├─ index.css                # Tailwind v4 @theme tokens + base styles + industrial slider styling
-   ├─ App.tsx                  # provider + role-aware layout + systems status strip
+   ├─ App.tsx                  # provider + role-aware cockpit layout + systems status strip + camera-focus owner
    ├─ types.ts                 # domain model + module/role metadata + PredictInput/PredictResponse
    ├─ constants.ts             # every simulation parameter & threshold (single source of truth)
+   ├─ forecast.ts              # per-module Twin Forecast — pure fn(state, role, module) → risk/eta/actions
    ├─ simulation/
    │  ├─ reducer.ts            # pure reducer: TICK loop, bands, alerts, store-and-forward, gen-failure
    │  ├─ SimProvider.tsx       # React provider: interval, satellite sync timer, action API
@@ -248,15 +264,16 @@ sih_2026_mvp/
    │  └─ useSim.ts             # useSim() hook (throws outside provider)
    └─ components/
       ├─ Header.tsx            # brand, role tabs, UTC clock, SatelliteLink control, offline banner
-      ├─ MapView.tsx           # 2D/3D toggle, WebGL detection + fallback, flows overlay, data block
+      ├─ MapView.tsx           # cockpit stage: 3D twin (kept mounted) / plan-sheet toggle, WebGL guard, HUD wiring, camera-fly dispatch
+      ├─ TwinHud.tsx           # HUD overlays: ModuleRail, LiveHud, ViewBar presets, AlertTicker
       ├─ StationMap.tsx        # CAD-blueprint SVG footprint (6 regions, grid, frame, sharp blink)
       ├─ three/
-      │  ├─ TwinCanvas.tsx     # react-three-fiber Canvas — camera, lights, OrbitControls, fog
+      │  ├─ TwinCanvas.tsx     # react-three-fiber Canvas — camera, lights, OrbitControls, fog, FlyRig camera focus
       │  ├─ ModuleNode.tsx     # per-module 3D body, CAD wireframe cage, beacon, selection ring, labels
       │  ├─ FlowLines.tsx      # animated energy flows (marching segments + status tint)
       │  ├─ Environment3D.tsx  # ground grid, sea, radar sweep, jetty/containers/helipad, storm snow
-      │  └─ sceneLayout.ts     # shared 3D coords / hit areas / wireframe sizes
-      ├─ ModuleDetailPanel.tsx # role-aware per-module live metrics
+      │  └─ sceneLayout.ts     # shared 3D coords / hit areas / wireframe sizes / camera focus points
+      ├─ ModuleDetailPanel.tsx # role-aware per-module live metrics + Twin Forecast + scoped alerts + Recentre/Close
       ├─ TelemetryCard.tsx     # reusable metric card (mono readout + chart + badges)
       ├─ TelemetryChart.tsx    # Recharts sparkline + threshold reference lines
       ├─ FuelRunway.tsx        # simulated days-of-fuel estimate + reserve gauge
@@ -390,7 +407,7 @@ Tempo: `TICK_MS = 2000` (one tick ≈ 29 sim-minutes, `TICK_DT_DAYS = 0.02`);
 
 | Feature | Primary files |
 |---------|---------------|
-| 1 · Module map + details | `components/MapView.tsx`, `components/three/*` (3D twin), `components/StationMap.tsx` (plan sheet), `components/ModuleDetailPanel.tsx` |
+| 1 · Cockpit twin (3D + HUD + navigation + forecast) | `components/MapView.tsx`, `components/TwinHud.tsx`, `components/three/*`, `components/StationMap.tsx` (plan sheet), `components/ModuleDetailPanel.tsx`, `forecast.ts`, `App.tsx` (focus owner + keyboard nav) |
 | 2 · Live telemetry | `simulation/reducer.ts` (channels), `components/TelemetryCard.tsx`, `components/TelemetryChart.tsx` |
 | 3 · Alert feed | `simulation/reducer.ts` (band transitions), `components/AlertsFeed.tsx` |
 | 4 · Fuel runway | `components/FuelRunway.tsx` + `daysRemaining` in state |
@@ -491,13 +508,15 @@ node /tmp/simtest.js        # → 27 passed, 0 failed
 A Puppeteer script loads the app, then drives the real UI: it verifies all
 seven features by clicking the actual controls (satellite toggle → queued
 packets → sync flush, generator failure → backup state → reset, role switch,
-map region selection) and asserts against `document.body.innerText` — with
-**zero console/page errors**. A second Puppeteer pass drives the **AI
-Predictive Lab** end-to-end against the live Groq route: it sets the override
-sliders to extreme inputs, clicks *Execute AI diagnostics*, waits for the
-prognosis banner, and asserts risk level, cascade, ETA, recommended action,
-provider badge and the inputs echo all render — then confirms the Scientist
-role unmounts the lab. Both passes run clean.
+map selection, plus a cockpit pass that selects modules from the 3D scene, the
+rail, the view presets and the keyboard and asserts each opens the detail
+panel with its **Twin Forecast**) and asserts against
+`document.body.innerText` — with **zero console/page errors**. A second
+Puppeteer pass drives the **AI Predictive Lab** end-to-end against the live
+Groq route: it sets the override sliders to extreme inputs, clicks *Execute AI
+diagnostics*, waits for the prognosis banner, and asserts risk level, cascade,
+ETA, recommended action, provider badge and the inputs echo all render — then
+confirms the Scientist role unmounts the lab. Both passes run clean.
 
 ---
 
@@ -517,6 +536,12 @@ role unmounts the lab. Both passes run clean.
   so Puppeteer runs pass `--enable-unsafe-swiftshader --use-angle=swiftshader`.
   The app itself never needs them — without WebGL it falls back to the Plan
   sheet automatically.
+- **WebGL context churn**: unmounting and recreating the R3F `<Canvas>` is
+  wasteful and brittle (a headless SwiftShader renderer could even crash the
+  tab). The twin therefore **stays mounted**; the Plan-sheet toggle flips it
+  with `display:none`, and a native `webglcontextlost` listener is also wired
+  to fall back to the plan sheet. Only if WebGL is unknown at first paint is
+  the Canvas never mounted at all.
 - **drei `<Html>` vs React 19**: drei's DOM-overlay `Html` triggers a
   "synchronously unmount a root while React was already rendering" warning on
   every sim tick. The twin therefore renders labels as canvas-texture
@@ -563,7 +588,13 @@ The reducer boundary is the seam for turning the twin into a real one:
   `sceneLayout.ts` + one entry in `FlowLines.tsx`; add fresh visual channels
   (solar arrays, wind booms) by extending `FlowKind` and giving it a
   `BASE_HEX`/link. Textures for module bodies can be dropped into
-  `ModuleNode.Body()` without touching the interaction layer.
+  `ModuleNode.Body()` without touching the interaction layer. New camera
+  eyepoints are one entry in `FOCUS_POINT`/`VIEW_DIST`.
+- **More forecast channels** — `forecast.ts` is a pure function; add a new
+  module or regime by extending the switch cases (they receive the same
+  `SimState`), and keep the deterministic math offline so forecasts never
+  depend on the network. A later build could pre-roll the same inputs through
+  the Groq lab for a cross-checked prognosis.
 
 ---
 

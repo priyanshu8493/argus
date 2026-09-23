@@ -49,18 +49,36 @@ function FlyRig({ focusKey, seq }: { focusKey: FocusKey; seq: number }) {
   return null
 }
 
+function ContextLostGuard({ onLost }: { onLost: () => void }) {
+  const gl = useThree((s) => s.gl)
+  const cb = useRef(onLost)
+  cb.current = onLost
+  useEffect(() => {
+    const el = gl.domElement
+    const h = (e: Event) => {
+      e.preventDefault()
+      cb.current()
+    }
+    el.addEventListener('webglcontextlost', h)
+    return () => el.removeEventListener('webglcontextlost', h)
+  }, [gl])
+  return null
+}
+
 export function TwinCanvas({
   modules,
   selected,
   onSelect,
   focusKey,
   focusSeq,
+  onContextLost,
 }: {
   modules: Record<ModuleId, ModuleState>
   selected: ModuleId | null
   onSelect: (id: ModuleId | null) => void
   focusKey: FocusKey
   focusSeq: number
+  onContextLost?: () => void
 }) {
   const { state } = useSim()
 
@@ -75,6 +93,7 @@ export function TwinCanvas({
     >
       <color attach="background" args={['#050b13']} />
       <fog attach="fog" args={['#050b13', 320, 700]} />
+      {onContextLost && <ContextLostGuard onLost={onContextLost} />}
 
       <ambientLight intensity={0.55} />
       <hemisphereLight args={['#2a4a6a', '#0a1420', 0.6]} />

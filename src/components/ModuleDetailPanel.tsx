@@ -306,7 +306,7 @@ export function ModuleDetailPanel({ onFly }: { onFly: (key: FocusKey) => void })
           </div>
         </div>
 
-        <div className="mt-2">{[rows]} </div>
+        <div className="mt-2">{rows}</div>
       </motion.div>
 
       {/* Scoped alerts */}

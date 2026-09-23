@@ -102,55 +102,55 @@ export function MapView({
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      {/* HUD — 3D twin */}
-      {show3d ? (
-        <div className="relative min-h-[500px] flex-1 overflow-hidden border border-line bg-abyss">
-          <GLBoundary onFail={() => setGlFailed(true)}>
-            <TwinCanvas
-              modules={modules}
-              selected={selected}
-              onSelect={select}
-              focusKey={focusKey}
-              focusSeq={focusSeq}
-            />
-          </GLBoundary>
+      {/* HUD — 3D twin (kept mounted; toggled off with display:none to avoid WebGL context churn) */}
+      <div className={show3d ? 'relative min-h-[500px] flex-1 overflow-hidden border border-line bg-abyss' : 'hidden'}>
+        <GLBoundary onFail={() => setGlFailed(true)}>
+          <TwinCanvas
+            modules={modules}
+            selected={selected}
+            onSelect={select}
+            focusKey={focusKey}
+            focusSeq={focusSeq}
+            onContextLost={() => setGlFailed(true)}
+          />
+        </GLBoundary>
 
-          <ModuleRail selected={selected} onPick={pickModule} />
-          <LiveHud />
-          <ViewBar view="3d" onView={flyView} onToggle={toggle} />
-          <AlertTicker />
+        <ModuleRail selected={selected} onPick={pickModule} />
+        <LiveHud />
+        <ViewBar view="3d" onView={flyView} onToggle={toggle} />
+        <AlertTicker />
 
-          {storm && (
-            <div className="pointer-events-none absolute left-2 top-[190px] z-10 border border-amber/50 bg-abyss/85 px-2 py-1 font-mono text-[8px] uppercase tracking-[0.16em] text-amber">
-              storm front · blizzard on site
-            </div>
-          )}
-
-          <div className="pointer-events-none absolute left-1/2 top-2 z-10 flex -translate-x-1/2 items-center gap-2 border border-line bg-abyss/85 px-2 py-1 backdrop-blur-sm">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-glacial" />
-            <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-ink">{focusLabel}</span>
-            <span className="hidden font-mono text-[8px] uppercase tracking-[0.14em] text-slate-faint lg:inline">
-              keys 1-6 · p port · esc site
-            </span>
+        {storm && (
+          <div className="pointer-events-none absolute left-2 top-[190px] z-10 border border-amber/50 bg-abyss/85 px-2 py-1 font-mono text-[8px] uppercase tracking-[0.16em] text-amber">
+            storm front · blizzard on site
           </div>
+        )}
+
+        <div className="pointer-events-none absolute left-1/2 top-2 z-10 flex -translate-x-1/2 items-center gap-2 border border-line bg-abyss/85 px-2 py-1 backdrop-blur-sm">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-glacial" />
+          <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-ink">{focusLabel}</span>
+          <span className="hidden font-mono text-[8px] uppercase tracking-[0.14em] text-slate-faint lg:inline">
+            keys 1-6 · p port · esc site
+          </span>
         </div>
-      ) : (
-        <div className="min-w-0">
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-slate-dim">
-              CAD plan sheet · schematic
-            </span>
-            <button
-              type="button"
-              onClick={() => toggle('3d')}
-              className="border border-glacial/60 bg-glacial/10 px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-glacial"
-            >
-              Back to Twin 3D
-            </button>
-          </div>
-          <StationMap modules={modules} selected={selected} onSelect={select} />
+      </div>
+
+      {/* Plan sheet */}
+      <div className={show3d ? 'hidden' : 'min-w-0'}>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-slate-dim">
+            CAD plan sheet · schematic
+          </span>
+          <button
+            type="button"
+            onClick={() => toggle('3d')}
+            className="border border-glacial/60 bg-glacial/10 px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-glacial"
+          >
+            Back to Twin 3D
+          </button>
         </div>
-      )}
+        <StationMap modules={modules} selected={selected} onSelect={select} />
+      </div>
     </div>
   )
 }
