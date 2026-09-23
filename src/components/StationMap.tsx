@@ -31,8 +31,8 @@ function Glyph({ id }: { id: ModuleId }) {
     case 'main':
       return (
         <g>
-          <rect x={20} y={18} width={78} height={46} rx={2} {...hair} />
-          <rect x={20} y={18} width={78} height={46} rx={2} {...s} strokeWidth={1} />
+          <rect x={20} y={18} width={78} height={46} rx={0} {...hair} />
+          <rect x={20} y={18} width={78} height={46} rx={0} {...s} strokeWidth={1} />
           <path d="M38 18 L56 6 L74 18" {...s} strokeWidth={1} />
           <g fill="#9fb8cc">
             <rect x={30} y={32} width={9} height={9} opacity={0.7} />
@@ -59,7 +59,7 @@ function Glyph({ id }: { id: ModuleId }) {
     case 'fuel-station':
       return (
         <g>
-          <rect x={18} y={16} width={96} height={50} rx={3} {...s} strokeWidth={1} />
+          <rect x={18} y={16} width={96} height={50} rx={0} {...s} strokeWidth={1} />
           <rect x={28} y={28} width={20} height={26} fill="#9fb8cc" opacity={0.55} />
           <rect x={58} y={28} width={20} height={26} fill="#9fb8cc" opacity={0.55} />
           <rect x={86} y={28} width={16} height={26} fill="#5ec8d8" opacity={0.4} />
@@ -69,7 +69,7 @@ function Glyph({ id }: { id: ModuleId }) {
     case 'pump-house':
       return (
         <g>
-          <rect x={14} y={18} width={60} height={44} rx={2} {...s} strokeWidth={1} />
+          <rect x={14} y={18} width={60} height={44} rx={0} {...s} strokeWidth={1} />
           <rect x={22} y={28} width={16} height={14} fill="#9fb8cc" opacity={0.55} />
           <rect x={48} y={28} width={16} height={14} fill="#9fb8cc" opacity={0.55} />
           <path d="M16 62 L0 66" {...s} strokeWidth={1.4} />
@@ -87,7 +87,7 @@ function Glyph({ id }: { id: ModuleId }) {
           <g {...s} strokeWidth={1}>
             <path d="M18 58 L42 26 L66 58 Z" opacity={0.7} />
           </g>
-          <rect x={22} y={76} width={54} height={14} rx={2} fill="#0a1420" stroke="#7fa3c0" strokeWidth={1} opacity={0.85} />
+          <rect x={22} y={76} width={54} height={14} rx={0} fill="#0a1420" stroke="#7fa3c0" strokeWidth={1} opacity={0.85} />
         </g>
       )
     case 'ageos':
@@ -140,26 +140,22 @@ function Region({
       // eslint-disable-next-line react/no-unknown-property
       data-status={mod.status}
     >
+      {/* selection viewfinder — CAD corner brackets */}
       <motion.g
         className="pointer-events-none"
         animate={{ opacity: selected ? 1 : 0 }}
         initial={false}
       >
-        <rect
-          x={-3}
-          y={-3}
-          width={def.w + 6}
-          height={def.h + 6}
-          rx={5}
-          fill="none"
-          stroke={hex}
-          strokeOpacity={0.4}
-          strokeWidth={1}
-        />
+        <g stroke={hex} strokeWidth={1.5} fill="none">
+          <path d={`M${def.x} ${def.y + 12} V${def.y} H${def.x + 12}`} />
+          <path d={`M${def.x + def.w - 12} ${def.y} H${def.x + def.w} V${def.y + 12}`} />
+          <path d={`M${def.x + def.w} ${def.y + def.h - 12} V${def.y + def.h} H${def.x + def.w - 12}`} />
+          <path d={`M${def.x + 12} ${def.y + def.h} H${def.x} V${def.y + def.h - 12}`} />
+        </g>
       </motion.g>
 
       {/* hit area */}
-      <rect x={0} y={0} width={def.w} height={def.h} rx={4} fill="transparent" />
+      <rect x={0} y={0} width={def.w} height={def.h} rx={0} fill="transparent" />
 
       {/* status-tinted panel */}
       <motion.rect
@@ -167,14 +163,14 @@ function Region({
         y={0}
         width={def.w}
         height={def.h}
-        rx={4}
+        rx={0}
         initial={false}
         animate={{ fill: hex, fillOpacity: 0.08, stroke: hex }}
         transition={{ duration: 0.7, ease: 'easeOut' }}
-        strokeWidth={selected ? 1.8 : 1.1}
+        strokeWidth={selected ? 1.6 : 1.1}
       />
 
-      {/* critical pulse ring */}
+      {/* critical pulse — hard blink, no glow */}
       {mod.status === 'critical' && (
         <motion.rect
           className="pointer-events-none"
@@ -182,13 +178,13 @@ function Region({
           y={-2}
           width={def.w + 4}
           height={def.h + 4}
-          rx={5}
+          rx={0}
           fill="none"
           stroke={hex}
-          strokeOpacity={0.5}
-          initial={{ opacity: 0.4 }}
-          animate={{ opacity: [0.35, 0.9, 0.35] }}
-          transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+          strokeWidth={1.7}
+          initial={{ opacity: 0.8 }}
+          animate={{ opacity: [0.9, 0.15, 0.9] }}
+          transition={{ duration: 0.55, repeat: Infinity, times: [0, 0.6, 1], ease: 'linear' }}
         />
       )}
 
@@ -223,32 +219,30 @@ export function StationMap({
       aria-label="Bharati station module map"
     >
       <defs>
-        <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#0b1d30" />
-          <stop offset="100%" stopColor="#071525" />
-        </linearGradient>
-        <linearGradient id="land" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#122539" />
-          <stop offset="100%" stopColor="#0e2033" />
-        </linearGradient>
+        <pattern id="bgrid" width="40" height="40" patternUnits="userSpaceOnUse">
+          <path d="M40 0 H0 V40" fill="none" stroke="#122a41" strokeWidth="0.6" />
+        </pattern>
+        <pattern id="seahatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <line x1="0" y1="0" x2="0" y2="8" stroke="#14324e" strokeWidth="1" />
+        </pattern>
       </defs>
 
-      {/* sea */}
-      <rect x={0} y={318} width={920} height={202} fill="url(#sea)" />
+      {/* coastline / sea — flat bed + engineering hatch */}
+      <rect x={0} y={314} width={920} height={206} fill="#0a2033" />
+      <rect x={0} y={314} width={920} height={206} fill="url(#seahatch)" opacity={0.6} />
       <path
         d="M0 318 Q 90 300 180 330 T 360 322 T 540 332 T 720 318 T 920 322 L 920 330 L 0 330 Z"
         fill="none"
         stroke="#163a52"
         strokeWidth={1}
-        opacity={0.6}
+        opacity={0.7}
       />
 
-      {/* land */}
+      {/* land — flat fill, contour hairlines */}
       <path
         d="M0 150 L60 70 L150 38 L300 44 L410 62 L560 40 L700 62 L860 48 L920 92 L920 330 L800 350 L640 322 L520 372 L430 344 L300 378 L170 344 L80 378 L0 344 Z"
-        fill="url(#land)"
+        fill="#10263c"
       />
-      {/* raised ridge contour */}
       <path d="M60 150 Q 180 190 320 160 T 640 150 T 920 170" fill="none" stroke="#1a3047" strokeWidth={1} />
       <path d="M120 210 Q 260 250 420 210 T 700 200" fill="none" stroke="#18304a" strokeWidth={0.8} />
 
@@ -317,6 +311,55 @@ export function StationMap({
           </g>
         )
       })}
+
+      {/* survey grid overlay */}
+      <g pointerEvents="none" opacity={0.5}>
+        <rect x={0} y={0} width={920} height={520} fill="url(#bgrid)" />
+      </g>
+
+      {/* center crosshairs */}
+      {REGIONS.map((d) => {
+        const cx = d.x + d.w / 2
+        const cy = d.y + d.h / 2
+        return (
+          <g key={`${d.id}-cross`} pointerEvents="none" stroke="#24405c" strokeWidth={0.8} opacity={0.85}>
+            <path d={`M${cx - 7} ${cy} H${cx - 2} M${cx + 2} ${cy} H${cx + 7} M${cx} ${cy - 7} V${cy - 2} M${cx} ${cy + 2} V${cy + 7}`} />
+          </g>
+        )
+      })}
+
+      {/* drawing frame + edge ticks */}
+      <g pointerEvents="none" stroke="#1d3348" strokeWidth={1} fill="none">
+        <rect x={0} y={0} width={920} height={520} />
+        <path d="M6 26 V6 H26 M894 6 H914 V26 M914 494 V514 H894 M26 514 H6 V494" />
+      </g>
+      <g pointerEvents="none" stroke="#1d3348" strokeWidth={1}>
+        {Array.from({ length: 16 }, (_, i) => i * 60).map((x) => (
+          <g key={`tx${x}`}>
+            <line x1={x} y1={0} x2={x} y2={4} />
+            <line x1={x} y1={520} x2={x} y2={516} />
+          </g>
+        ))}
+        {Array.from({ length: 12 }, (_, i) => i * 48).map((y) => (
+          <g key={`ty${y}`}>
+            <line x1={0} y1={y} x2={4} y2={y} />
+            <line x1={920} y1={y} x2={916} y2={y} />
+          </g>
+        ))}
+      </g>
+
+      {/* sheet data block */}
+      <g
+        pointerEvents="none"
+        fontFamily="IBM Plex Mono, monospace"
+        fontSize={8}
+        letterSpacing={1.4}
+        fill="#3d5a73"
+      >
+        <text x={14} y={24}>
+          BHT-01 · ANTARCTIC DIGITAL TWIN · GRID 40 M
+        </text>
+      </g>
 
       {/* north arrow */}
       <g transform="translate(30, 470)" stroke="#3d5a73" strokeWidth={1}>

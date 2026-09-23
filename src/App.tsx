@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { Activity, Droplets, Fuel, Gauge } from 'lucide-react'
 import { FUEL_CRIT, FUEL_WARN, LOAD_WARN, SEA_WARN, TEMP_WARN_HI, TEMP_WARN_LO } from './constants'
+import { AIPredictiveLab } from './components/AIPredictiveLab'
 import { AlertsFeed } from './components/AlertsFeed'
 import { FuelRunway } from './components/FuelRunway'
 import { Header } from './components/Header'
@@ -13,6 +14,7 @@ import { ROLE_META } from './types'
 import { SimProvider } from './simulation/SimProvider'
 import { useSim } from './simulation/useSim'
 import { STATUS_HEX } from './components/statusTheme'
+import type { Status } from './types'
 
 function Legend() {
   return (
@@ -188,6 +190,46 @@ function RoleNotice() {
   )
 }
 
+function SystemsStatusStrip() {
+  const { state } = useSim()
+  const counts = { ok: 0, warning: 0, critical: 0 }
+  for (const m of Object.values(state.modules)) counts[m.status] += 1
+  const worst: Status = counts.critical > 0 ? 'critical' : counts.warning > 0 ? 'warning' : 'ok'
+  const hex = STATUS_HEX[worst]
+  const label =
+    worst === 'critical' ? `critical fault · ${counts.critical} subsystem${counts.critical > 1 ? 's' : ''}` :
+    worst === 'warning' ? `${counts.warning} subsystem${counts.warning > 1 ? 's' : ''} degraded` :
+    'all systems nominal'
+
+  return (
+    <div className="flex items-center justify-between gap-4 border-b border-line bg-abyss/50 px-4 py-1.5">
+      <div className="flex items-center gap-2.5">
+        {worst === 'ok' ? (
+          <span className="h-2 w-2 bg-ok/90" />
+        ) : (
+          <motion.span
+            className="h-2 w-2"
+            style={{ background: hex }}
+            animate={worst === 'critical' ? { opacity: [1, 0.15, 1] } : { opacity: [0.55, 1, 0.55] }}
+            transition={worst === 'critical' ? { duration: 0.55, repeat: Infinity } : { duration: 1.4, repeat: Infinity }}
+          />
+        )}
+        <span className="font-mono text-[10px] uppercase tracking-[0.2em]" style={{ color: hex }}>
+          systems
+        </span>
+        <span className="hidden font-mono text-[10px] uppercase tracking-[0.16em] text-slate-dim sm:inline">
+          {label}
+        </span>
+      </div>
+      <div className="flex items-center gap-4 font-mono text-[9px] uppercase tracking-[0.14em]">
+        <span className="text-ok">ok {counts.ok}</span>
+        <span className="text-amber">warn {counts.warning}</span>
+        <span className="text-crit">crit {counts.critical}</span>
+      </div>
+    </div>
+  )
+}
+
 function Dashboard() {
   const { state } = useSim()
   const isOps = ROLE_META[state.role].isOps
@@ -195,11 +237,17 @@ function Dashboard() {
   return (
     <div className="flex h-full flex-col">
       <Header />
+      <SystemsStatusStrip />
       <main className="min-h-0 flex-1 overflow-y-auto p-4">
         <motion.div layout className="grid gap-4 xl:grid-cols-12">
           <motion.div layout className="min-w-0 xl:col-span-12">
             <RoleNotice />
           </motion.div>
+          {isOps && (
+            <motion.div layout className="min-w-0 xl:col-span-12">
+              <AIPredictiveLab />
+            </motion.div>
+          )}
           <motion.div layout className="flex min-w-0 flex-col gap-4 xl:col-span-7">
             <MapPanel />
             <ModuleDetailPanel />

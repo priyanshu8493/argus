@@ -2,6 +2,39 @@ export type Status = 'ok' | 'warning' | 'critical'
 
 export type Role = 'admin' | 'leader' | 'scientist'
 
+export type RiskLevel = 'NOMINAL' | 'WARNING' | 'CRITICAL'
+
+export interface PredictInput {
+  overrides: {
+    ambientTemperature: number
+    generatorLoad: number
+  }
+  telemetry: {
+    ambientTemperature: number
+    generatorLoad: number
+    fuelReserve: number
+    fuelBurnRatePercentDay: number
+    seaWaterIntake: number
+    daysRemaining: number
+  }
+}
+
+export interface Diagnostics {
+  risk_level: RiskLevel
+  predicted_cascade_effect: string
+  estimated_time_to_failure_hours: number
+  recommended_action: string
+}
+
+export interface PredictResponse {
+  provider: 'groq' | 'local-fallback'
+  model: string
+  latencyMs: number
+  generatedAt: number
+  inputs: PredictInput
+  diagnostics: Diagnostics
+}
+
 export type ModuleId =
   | 'main'
   | 'fuel-farm'
