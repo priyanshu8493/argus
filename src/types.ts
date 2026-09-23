@@ -43,6 +43,15 @@ export type ModuleId =
   | 'summer-camp'
   | 'ageos'
 
+export const MODULE_ID_SET: ModuleId[] = [
+  'main',
+  'fuel-farm',
+  'fuel-station',
+  'pump-house',
+  'summer-camp',
+  'ageos',
+]
+
 export interface Sample {
   t: number
   v: number

@@ -101,6 +101,7 @@ export function AIPredictiveLab() {
 
   return (
     <Panel
+      className="@container"
       title="AI Predictive Lab"
       sub="agentic forecasting · overrides → cascade prognosis"
       right={
@@ -117,13 +118,13 @@ export function AIPredictiveLab() {
         </>
       }
     >
-      <div className="grid gap-4 md:grid-cols-12">
+      <div className="grid gap-4 @3xl:grid-cols-12">
         {/* Live baseline */}
-        <div className="md:col-span-3">
+        <div className="@3xl:col-span-3">
           <h4 className="border-b border-line pb-1.5 font-mono text-[9px] uppercase tracking-[0.18em] text-slate-faint">
             Live system state
           </h4>
-          <div className="mt-2">
+          <div className="mt-2 grid grid-cols-2 gap-x-4 @3xl:block">
             <BaselineRow label="Ambient" value={state.temp.v.toFixed(1)} unit="°C" />
             <BaselineRow label="Gen load" value={state.generatorFailed ? '0' : state.gen.v.toFixed(0)} unit="%" />
             <BaselineRow label="Fuel reserve" value={state.fuel.v.toFixed(1)} unit="%" />
@@ -134,7 +135,7 @@ export function AIPredictiveLab() {
         </div>
 
         {/* Overrides */}
-        <div className="flex flex-col gap-3 md:col-span-5">
+        <div className="flex flex-col gap-3 @3xl:col-span-5">
           <div className="flex items-center justify-between gap-2 border-b border-line pb-1.5">
             <h4 className="font-mono text-[9px] uppercase tracking-[0.18em] text-slate-faint">Override inputs</h4>
             <button
@@ -171,7 +172,7 @@ export function AIPredictiveLab() {
         </div>
 
         {/* Execute */}
-        <div className="flex flex-col md:col-span-4">
+        <div className="flex flex-col @3xl:col-span-4">
           <h4 className="border-b border-line pb-1.5 font-mono text-[9px] uppercase tracking-[0.18em] text-slate-faint">
             Agentic diagnostic
           </h4>
@@ -250,7 +251,7 @@ export function AIPredictiveLab() {
             </div>
           </div>
 
-          <div className="grid gap-px bg-line md:grid-cols-3">
+          <div className="grid gap-px bg-line @3xl:grid-cols-3">
             <div className="bg-abyss/40 p-4">
               <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-slate-faint">Predicted cascade effect</p>
               <p className="mt-1.5 font-sans text-[12.5px] leading-relaxed text-ink">

@@ -7,6 +7,7 @@ export function Panel({
   children,
   className = '',
   as: Tag = 'section',
+  fill = false,
 }: {
   title?: string
   sub?: string
@@ -14,13 +15,14 @@ export function Panel({
   children: ReactNode
   className?: string
   as?: 'section' | 'div'
+  fill?: boolean
 }) {
   return (
     <Tag
-      className={`border border-line bg-panel/70 backdrop-blur-sm ${className}`}
+      className={`border border-line bg-panel/70 backdrop-blur-sm ${fill ? 'flex min-h-0 flex-col' : ''} ${className}`}
     >
       {(title || right) && (
-        <header className="flex h-10 items-center justify-between gap-3 border-b border-line-soft px-3.5">
+        <header className="flex h-10 shrink-0 items-center justify-between gap-3 border-b border-line-soft px-3.5">
           <div className="min-w-0">
             {title && (
               <h2 className="truncate font-sans text-[13px] font-medium tracking-wide text-ink">
@@ -36,7 +38,7 @@ export function Panel({
           {right && <div className="flex shrink-0 items-center gap-2">{right}</div>}
         </header>
       )}
-      <div className="p-3.5">{children}</div>
+      <div className={`p-3.5 ${fill ? 'flex min-h-0 flex-1 flex-col' : ''}`}>{children}</div>
     </Tag>
   )
 }

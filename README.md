@@ -87,7 +87,7 @@ The app is built to be **operated by a judge**, not just watched:
 
 | # | Feature | What happens |
 |---|---------|--------------|
-| 1 | **Station module map** | SVG schematic of the Bharati footprint: Main Building, Fuel Farm, Fuel Station, Sea-water Pump House, Summer Camp / Emergency Shelter, AGEOS ground station. Each region is tinted by live status (`ok` / `warning` / `critical`) and pulses when critical. Click a region (or Tab + Enter) to open a detail panel with live-bound metrics. |
+| 1 | **Station module map** | An **interactive 3D digital twin** (Three.js / react-three-fiber) of the Bharati footprint — Main Building, Fuel Farm, Fuel Station, Sea-water Pump House, Summer Camp / Emergency Shelter and the AGEOS ground station — rendered as a mission-control scene: engineering ground grid, radar sweep, animated power/fuel/sea-water/uplink flows, storm snow, CAD wireframe status cages and a blinking aviation beacon on the AGEOS mast. **Orbit / pan / zoom**, click any module to open its live-bound detail panel. A **Plan sheet** toggle drops back to the 2D SVG CAD schematic (default view is **Twin 3D**; it gracefully falls back to the plan sheet if WebGL is unavailable). |
 | 2 | **Live simulated telemetry** | Ambient temperature, generator load % and fuel reserve % update on a bounded random walk every ~2 s, rendered as smooth Recharts sparklines with monospace readouts and threshold reference lines. A 90-sample rolling window is kept per series. |
 | 3 | **Threshold-driven alerts** | Alerts auto-fire only on **band transitions** (nominal → warning → critical), so the feed is meaningful rather than noisy. Timestamped (UTC), severity-coloured, newest first. HQ Admin can acknowledge alerts; Station Leader only reads. |
 | 4 | **Fuel-runway estimate** | Live `days of fuel = reserve % ÷ burn %/day`, prominently displayed and labelled *Simulated estimate*. Colour-scales (≤ 25 d warning, ≤ 12 d critical) and animates on every recompute. |
@@ -130,6 +130,7 @@ module shows `Reserve metering → RESTRICTED (science role)`, and so on).
 | Icons | **lucide-react** | minimal, tree-shakeable |
 | Fonts | **@fontsource** (bundled, offline-safe) — *Space Grotesk* (UI/headings) + *IBM Plex Mono* (all live numeric readouts) | self-hosted so the app works with no network; mono face prevents digit jitter |
 | AI layer | **Groq API** (`openai/gpt-oss-20b`) via a serverless-style `api/predict.ts` route | agentic forecasting of cascade effects from operator-driven overrides — see [Agentic AI layer](#agentic-ai-layer) |
+| 3D twin | **Three.js** via **@react-three/fiber** + **@react-three/drei** | interactive 3D digital twin with orbit controls, animated energy/uplink flows, storm snow and live status visualisation |
 
 The simulation itself lives entirely in the browser. The only outbound call is
 `POST /api/predict`, served as Vite dev/preview middleware (the Groq key stays
@@ -166,6 +167,13 @@ Principles enforced in `src/components`:
   fills (no gradients), hatch pattern water, engineering grid overlay, drawing
   frame with edge ticks, center crosshairs, redraw corners instead of rounded
   corners, and a *sharp* opacity blink (not a soft glow) on critical modules.
+- **3D mission field**: the default map view is a real-time Three.js twin —
+  engineering ground grid, sea-water plane, rotating radar sweep, jetty /
+  shipping containers / helipad / heat-pylon site furniture, CAD wireframe
+  status cages per module, blinking beacons, and **animated energy flows**
+  (power cyan, fuel amber, sea-water, satellite uplink) that tint by live
+  status and reverse to red when the generator trips. Two-dimensional
+  "Plan sheet" remains a dropdown away for the schematic representation.
 - **Systems status strip**: a slim global bar under the header aggregates all
   six module statuses into one blinking `SYSTEMS: ALL NOMINAL / DEGRADED /
   CRITICAL` verdict with OK/WARN/CRIT counters.
@@ -176,6 +184,9 @@ Principles enforced in `src/components`:
   (`STATUS_HEX`, `STATUS_LABEL`, `statusLabelShort`, tailwind class maps) and
   reused by the map, chips, charts and alerts, so a severity can never drift
   between panels.
+- **WebGL-safe fallback**: if a browser/GPU cannot create a WebGL context the
+  twin auto-renders the Plan sheet instead of a black canvas (one-line note in
+  the map header), so the demo never degrades to a blank panel.
 
 ---
 
@@ -237,7 +248,14 @@ sih_2026_mvp/
    │  └─ useSim.ts             # useSim() hook (throws outside provider)
    └─ components/
       ├─ Header.tsx            # brand, role tabs, UTC clock, SatelliteLink control, offline banner
+      ├─ MapView.tsx           # 2D/3D toggle, WebGL detection + fallback, flows overlay, data block
       ├─ StationMap.tsx        # CAD-blueprint SVG footprint (6 regions, grid, frame, sharp blink)
+      ├─ three/
+      │  ├─ TwinCanvas.tsx     # react-three-fiber Canvas — camera, lights, OrbitControls, fog
+      │  ├─ ModuleNode.tsx     # per-module 3D body, CAD wireframe cage, beacon, selection ring, labels
+      │  ├─ FlowLines.tsx      # animated energy flows (marching segments + status tint)
+      │  ├─ Environment3D.tsx  # ground grid, sea, radar sweep, jetty/containers/helipad, storm snow
+      │  └─ sceneLayout.ts     # shared 3D coords / hit areas / wireframe sizes
       ├─ ModuleDetailPanel.tsx # role-aware per-module live metrics
       ├─ TelemetryCard.tsx     # reusable metric card (mono readout + chart + badges)
       ├─ TelemetryChart.tsx    # Recharts sparkline + threshold reference lines
@@ -372,7 +390,7 @@ Tempo: `TICK_MS = 2000` (one tick ≈ 29 sim-minutes, `TICK_DT_DAYS = 0.02`);
 
 | Feature | Primary files |
 |---------|---------------|
-| 1 · Module map + details | `components/StationMap.tsx`, `components/ModuleDetailPanel.tsx` |
+| 1 · Module map + details | `components/MapView.tsx`, `components/three/*` (3D twin), `components/StationMap.tsx` (plan sheet), `components/ModuleDetailPanel.tsx` |
 | 2 · Live telemetry | `simulation/reducer.ts` (channels), `components/TelemetryCard.tsx`, `components/TelemetryChart.tsx` |
 | 3 · Alert feed | `simulation/reducer.ts` (band transitions), `components/AlertsFeed.tsx` |
 | 4 · Fuel runway | `components/FuelRunway.tsx` + `daysRemaining` in state |
@@ -492,8 +510,18 @@ role unmounts the lab. Both passes run clean.
   such nodes **into a variable first** (`const trippedChip = cond ? … : undefined`
   then `right={trippedChip}`). Keep this pattern when extending.
 - **Chunk-size warning** at build (`~700 kB JS`): caused by Recharts +
-  Framer Motion + React 19 being eager-imported. Deliberate for an MVP — a
-  route-level dynamic import would also split it. It is a warning, not an error.
+  Framer Motion + React 19 + Three.js being eager-imported. Deliberate for an
+  MVP — a route-level dynamic import of the twin and the charts would split it.
+  It is a warning, not an error.
+- **Headless-browser testing needs WebGL flags**: R3F requires a real context,
+  so Puppeteer runs pass `--enable-unsafe-swiftshader --use-angle=swiftshader`.
+  The app itself never needs them — without WebGL it falls back to the Plan
+  sheet automatically.
+- **drei `<Html>` vs React 19**: drei's DOM-overlay `Html` triggers a
+  "synchronously unmount a root while React was already rendering" warning on
+  every sim tick. The twin therefore renders labels as canvas-texture
+  **sprites** (crisp, zero DOM coupling) instead of `Html` overlays. If you
+  re-introduce `Html`, expect that warning.
 - **StrictMode double-invoke**: the dev build mounts effects twice; the two
   timers (TICK + sync flush) are written to be idempotent against that
   (`setInterval` is cleaned up; `SYNC_DONE` is a guard no-op when not syncing).
@@ -531,6 +559,11 @@ The reducer boundary is the seam for turning the twin into a real one:
 - **Time/pace controls** — expose `TICK_MS` and `TICK_DT_DAYS` (already constants)
   as a "sim accelerator" so a long fuel-drain scenario can be demonstrated in
   minutes.
+- **3D choreography** — a new module or wire is one record in
+  `sceneLayout.ts` + one entry in `FlowLines.tsx`; add fresh visual channels
+  (solar arrays, wind booms) by extending `FlowKind` and giving it a
+  `BASE_HEX`/link. Textures for module bodies can be dropped into
+  `ModuleNode.Body()` without touching the interaction layer.
 
 ---
 

@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
-import { Activity, Droplets, Fuel, Gauge } from 'lucide-react'
-import { FUEL_CRIT, FUEL_WARN, LOAD_WARN, SEA_WARN, TEMP_WARN_HI, TEMP_WARN_LO } from './constants'
+import { Droplets, Activity } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { SEA_WARN, TEMP_WARN_HI, TEMP_WARN_LO } from './constants'
 import { AIPredictiveLab } from './components/AIPredictiveLab'
 import { AlertsFeed } from './components/AlertsFeed'
 import { FuelRunway } from './components/FuelRunway'
@@ -8,7 +9,9 @@ import { Header } from './components/Header'
 import { ModuleDetailPanel } from './components/ModuleDetailPanel'
 import { Panel, SimTag } from './components/Panel'
 import { WhatIfPanel } from './components/WhatIfPanel'
-import { StationMap } from './components/StationMap'
+import { MapView } from './components/MapView'
+import type { FocusKey } from './components/three/sceneLayout'
+import { MODULE_ID_SET } from './types'
 import { TelemetryCard } from './components/TelemetryCard'
 import { ROLE_META } from './types'
 import { SimProvider } from './simulation/SimProvider'
@@ -29,86 +32,91 @@ function Legend() {
   )
 }
 
-function MapPanel() {
+function MapPanel({
+  focusKey,
+  focusSeq,
+  onFly,
+}: {
+  focusKey: FocusKey
+  focusSeq: number
+  onFly: (key: FocusKey) => void
+}) {
   const { state, selectModule } = useSim()
   return (
     <Panel
-      title="Station module map"
-      sub="live status by module · click a region"
+      fill
+      className="min-h-[540px] xl:min-h-[calc(100vh-212px)]"
+      title="Interactive 3D digital twin"
+      sub="click a module, use the rail, or a view preset — the twin flies you there"
       right={
         <>
           <Legend />
-          <SimTag label="Schematic layout" />
+          <SimTag label="Simulated twin" />
         </>
       }
     >
-      <StationMap modules={state.modules} selected={state.selected} onSelect={selectModule} />
-      <div className="mt-2 flex items-center justify-between border-t border-line-soft pt-2">
-        <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-slate-faint">
-          6 subsystems bound to real-time twin
-        </p>
-        <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-slate-faint">
-          S69.41° E76.19° · Prydz Bay
-        </p>
-      </div>
+      <MapView
+        modules={state.modules}
+        selected={state.selected}
+        onSelect={selectModule}
+        focusKey={focusKey}
+        focusSeq={focusSeq}
+        onFly={onFly}
+      />
     </Panel>
   )
 }
 
+function TwinStage() {
+  const { state, selectModule } = useSim()
+  const [focusKey, setFocusKey] = useState<FocusKey>('site')
+  const [focusSeq, setFocusSeq] = useState(0)
+
+  const flyTo = (key: FocusKey) => {
+    setFocusKey(key)
+    setFocusSeq((s) => s + 1)
+  }
+
+  const { selected } = state
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const idx = parseInt(e.key, 10)
+      if (e.key === 'Escape' || e.key === '0') {
+        if (selected === null && e.key === 'Escape') return
+        selectModule(null)
+        flyTo('site')
+        return
+      }
+      if (e.key === 'p' || e.key === 'P') {
+        flyTo('jetty')
+        return
+      }
+      if (idx >= 1 && idx <= MODULE_ID_SET.length) {
+        const id = MODULE_ID_SET[idx - 1]
+        selectModule(id)
+        flyTo(id)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [selectModule, selected])
+
+  return (
+    <motion.div layout className="flex min-w-0 flex-col gap-4 xl:col-span-8">
+      <MapPanel focusKey={focusKey} focusSeq={focusSeq} onFly={flyTo} />
+      <ModuleDetailPanel onFly={flyTo} />
+    </motion.div>
+  )
+}
+
 function OpsColumn() {
-  const { state } = useSim()
-  const trippedChip = state.generatorFailed ? (
-    <span className="border border-amber/50 bg-amber/10 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-amber">
-      Tripped
-    </span>
-  ) : undefined
   return (
     <>
       <FuelRunway />
-      <TelemetryCard
-        icon={<Activity size={13} className="text-glacial" />}
-        title="Ambient temperature"
-        sub="surf-air · refresh 2 s"
-        value={state.temp.v.toFixed(1)}
-        unit="°C"
-        status={state.temp.band.kind}
-        color="#5ec8d8"
-        history={state.temp.history}
-        domain={[-40, 10]}
-        markers={[
-          { y: TEMP_WARN_LO, kind: 'warning' },
-          { y: TEMP_WARN_HI, kind: 'warning' },
-        ]}
-      />
-      <TelemetryCard
-        icon={<Gauge size={13} className="text-glacial" />}
-        title="Generator load"
-        sub="main bus · warning at 80 %"
-        value={state.generatorFailed ? '0' : state.gen.v.toFixed(0)}
-        unit="%"
-        status={state.generatorFailed ? 'ok' : state.gen.band.kind}
-        color="#5ec8d8"
-        history={state.gen.history}
-        domain={[0, 100]}
-        markers={[{ y: LOAD_WARN, kind: 'warning' }]}
-        right={trippedChip}
-      />
-      <TelemetryCard
-        icon={<Fuel size={13} className="text-glacial" />}
-        title="Fuel reserve"
-        sub="storage bladders · warn 30 % / crit 15 %"
-        value={state.fuel.v.toFixed(1)}
-        unit="%"
-        status={state.fuel.band.kind}
-        color="#5ec8d8"
-        history={state.fuel.history}
-        domain={[0, 100]}
-        markers={[
-          { y: FUEL_WARN, kind: 'warning' },
-          { y: FUEL_CRIT, kind: 'critical' },
-        ]}
-      />
       <WhatIfPanel />
+      <AIPredictiveLab />
+      <AlertsFeed />
     </>
   )
 }
@@ -243,23 +251,10 @@ function Dashboard() {
           <motion.div layout className="min-w-0 xl:col-span-12">
             <RoleNotice />
           </motion.div>
-          {isOps && (
-            <motion.div layout className="min-w-0 xl:col-span-12">
-              <AIPredictiveLab />
-            </motion.div>
-          )}
-          <motion.div layout className="flex min-w-0 flex-col gap-4 xl:col-span-7">
-            <MapPanel />
-            <ModuleDetailPanel />
-          </motion.div>
-          <motion.div layout className="flex min-w-0 flex-col gap-4 xl:col-span-5">
+          <TwinStage />
+          <motion.div layout className="flex min-w-0 flex-col gap-4 xl:col-span-4">
             {isOps ? <OpsColumn /> : <ScienceColumn />}
           </motion.div>
-          {isOps && (
-            <motion.div layout className="min-w-0 xl:col-span-12">
-              <AlertsFeed />
-            </motion.div>
-          )}
         </motion.div>
       </main>
       <Footer />
